@@ -230,7 +230,6 @@ window.deleteRecord = async (collectionName, docId) => {
     try {
         await deleteDoc(doc(db, collectionName, docId));
         
-        // Refresh the current screen viewpoint smoothly
         if (currentView === "chapters") navigateToChapters();
         else if (currentView === "dpps") navigateToDpps();
         else if (currentView === "questions") navigateToQuestions();
@@ -240,7 +239,7 @@ window.deleteRecord = async (collectionName, docId) => {
 };
 
 /* =========================================================================
-   4. MODAL POPUP SUBMISSIONS 
+   4. MODAL POPUP SUBMISSIONS & IMAGE COMPRESSION ENGINE
    ========================================================================= */
 fabAdd.addEventListener("click", () => {
     modalContainer.classList.remove("hidden");
@@ -294,9 +293,22 @@ document.getElementById("btn-modal-submit").addEventListener("click", async () =
         
         if (!rawFile) return alert("You must choose a solution image or PDF file!");
         
-        document.getElementById("selected-file-indicator").textContent = "Processing and converting file...";
+        document.getElementById("selected-file-indicator").textContent = "Processing and optimizing file...";
 
-        const encodedDataString = await readAsBase64(rawFile);
+        let encodedDataString = "";
+
+        // If it's an image, auto-compress it down to canvas boundaries under 1MB
+        if (rawFile.type.startsWith("image/")) {
+            encodedDataString = await compressImage(rawFile);
+        } else {
+            // If it's a PDF, read it as-is
+            encodedDataString = await readAsBase64(rawFile);
+            if (encodedDataString.length > 1048487) {
+                alert("This PDF file is too large for Firestore database limits. Please select a PDF file smaller than 700KB.");
+                document.getElementById("selected-file-indicator").textContent = "Error: File too large.";
+                return;
+            }
+        }
 
         await addDoc(collection(db, "questions"), {
             dppId: selectedDppId,
@@ -320,8 +332,46 @@ function readAsBase64(file) {
     });
 }
 
+// Client-side scaling engine to shrink photo files under 1MB
+function compressImage(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                // Limit maximum width or height to 1200px to maintain clear visibility
+                let width = img.width;
+                let height = img.height;
+                const maxDim = 1200;
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height *= maxDim / width;
+                        width = maxDim;
+                    } else {
+                        width *= maxDim / height;
+                        height = maxDim;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Compress image to JPEG format at 65% quality
+                const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+                resolve(dataUrl);
+            };
+        };
+    });
+}
+
 /* =========================================================================
-   5. FULL IMMERSIVE VIEWPORT RENDERING ENGINE (NATIVE BASE64 STREAM)
+   5. FULL IMMERSIVE VIEWPORT RENDERING ENGINE
    ========================================================================= */
 window.openInlineFile = async (docId, title) => {
     modalContainer.classList.remove("hidden");
