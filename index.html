@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DPP Smart Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+    <div id="auth-screen" class="screen flex-center">
+        <div class="auth-card">
+            <h2>Welcome to DPP Tracker</h2>
+            <p>Sign in with your Gmail account to sync data across your laptop and mobile device.</p>
+            <button id="btn-login" class="purple-btn flex-center" style="width: 100%;">
+                <span class="material-icons">account_circle</span> Sign in with Google
+            </button>
+        </div>
+    </div>
+
+    <div id="app-screen" class="screen hidden">
+        <header class="app-header">
+            <button id="btn-back" class="icon-btn hidden"><span class="material-icons">arrow_back</span></button>
+            <h1 id="current-title">Subjects</h1>
+            <button id="btn-logout" class="icon-btn"><span class="material-icons">logout</span></button>
+        </header>
+
+        <main id="content-render-area" class="grid-layout"></main>
+
+        <button id="fab-add" class="fab-purple-btn hidden">
+            <span class="material-icons">add</span>
+        </button>
+    </div>
+
+    <div id="modal-container" class="modal-overlay hidden">
+        <div id="form-modal-card" class="modal-card hidden">
+            <h3 id="form-modal-title">Add Record</h3>
+            
+            <div class="input-group">
+                <label for="record-date">Tracking Date</label>
+                <input type="date" id="record-date">
+            </div>
+
+            <div class="input-group">
+                <label id="input-label-text" for="primary-input">Name</label>
+                <input type="text" id="primary-input" placeholder="e.g. Kinematics or DPP 01">
+            </div>
+            
+            <div id="question-file-fields" class="hidden">
+                <div class="input-group">
+                    <label for="question-notes">Text Solution / Formula Notes</label>
+                    <textarea id="question-notes" rows="3" placeholder="Enter notes here..."></textarea>
+                </div>
+                <div class="input-group file-uploader-zone">
+                    <label class="file-stub-btn" for="solution-file-picker">
+                        <span class="material-icons">cloud_upload</span> Choose Photo or PDF Solution (Optional)
+                    </label>
+                    <input type="file" id="solution-file-picker" accept="image/png, image/jpeg, application/pdf">
+                    <div id="selected-file-indicator">No file selected (Max 15MB)</div>
+                </div>
+            </div>
+
+            <div id="modal-error-message" style="color: #ef4444; font-size: 14px; font-weight: 600; text-align: center; margin: 10px 0; min-height: 20px;"></div>
+
+            <div class="modal-actions">
+                <button id="btn-modal-submit" class="purple-btn-full">Save Record</button>
+                <button id="btn-modal-cancel" class="flat-btn">Cancel</button>
+            </div>
+        </div>
+
+        <div id="viewer-modal-card" class="modal-card pdf-fullscreen hidden">
+            <div class="pdf-toolbar">
+                <div id="pdf-file-name" style="font-size: 14px; font-weight: 500;">Viewing Solution</div>
+                <button id="btn-close-viewer" class="icon-btn text-white"><span class="material-icons">close</span></button>
+            </div>
+            <div class="pdf-render-viewport" style="width: 100%; height: 100%;">
+                </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
