@@ -37,12 +37,15 @@ const fabAdd = document.getElementById("fab-add");
 const modalContainer = document.getElementById("modal-container");
 const formModalCard = document.getElementById("form-modal-card");
 const viewerModalCard = document.getElementById("viewer-modal-card");
+const modalError = document.getElementById("modal-error-message");
 
 /* =========================================================================
    1. AUTHENTICATION PIPELINE
    ========================================================================= */
 document.getElementById("btn-login").addEventListener("click", () => {
-    signInWithPopup(auth, provider).catch(err => alert("Auth Failed: " + err.message));
+    signInWithPopup(auth, provider).catch(err => {
+        console.error("Auth Failed: ", err);
+    });
 });
 
 document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
@@ -105,10 +108,14 @@ async function navigateToChapters() {
         }
 
         chaptersList.forEach(item => {
+            const displayDate = item.date ? `<span style="font-size:12px; color:var(--text-muted); display:block; font-weight:normal; margin-top:2px;">Added: ${item.date}</span>` : "";
             contentArea.innerHTML += `
                 <div class="tracker-card" style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="card-main-clickable" onclick="selectChapter('${item.id}', '${item.name}')" style="display: flex; flex-grow: 1; justify-content: space-between; align-items: center; cursor: pointer;">
-                        <span class="card-title">📁 ${item.name}</span>
+                        <div>
+                            <span class="card-title">📁 ${item.name}</span>
+                            ${displayDate}
+                        </div>
                         <span class="material-icons">chevron_right</span>
                     </div>
                     <span class="material-icons delete-btn" onclick="event.stopPropagation(); deleteRecord('chapters', '${item.id}')">delete</span>
@@ -150,10 +157,14 @@ async function navigateToDpps() {
         }
 
         dppsList.forEach(item => {
+            const displayDate = item.date ? `<span style="font-size:12px; color:var(--text-muted); display:block; font-weight:normal; margin-top:2px;">Target Date: ${item.date}</span>` : "";
             contentArea.innerHTML += `
                 <div class="tracker-card" style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="card-main-clickable" onclick="selectDpp('${item.id}', '${item.name}')" style="display: flex; flex-grow: 1; justify-content: space-between; align-items: center; cursor: pointer;">
-                        <span class="card-title">📄 ${item.name}</span>
+                        <div>
+                            <span class="card-title">📄 ${item.name}</span>
+                            ${displayDate}
+                        </div>
                         <span class="material-icons">chevron_right</span>
                     </div>
                     <span class="material-icons delete-btn" onclick="event.stopPropagation(); deleteRecord('dpps', '${item.id}')">delete</span>
@@ -195,14 +206,24 @@ async function navigateToQuestions() {
         }
 
         questionsList.forEach(item => {
+            const displayDate = item.date ? `<span style="font-size:11px; font-weight:bold; color: #94a3b8; margin-right:8px;">📅 ${item.date}</span>` : "";
+            
+            // Check if there is actual attachment file data present
+            const hasFile = item.fileDataStream ? true : false;
+            const visibilityIcon = hasFile ? 'visibility' : 'notes';
+            const titleColor = hasFile ? 'var(--primary-purple)' : '#475569';
+
             contentArea.innerHTML += `
                 <div class="tracker-card" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="card-main-clickable" onclick="openInlineFile('${item.id}', 'Question ${item.number}')" style="display: flex; flex-grow: 1; justify-content: space-between; align-items: center; cursor: pointer;">
+                    <div class="card-main-clickable" onclick="handleQuestionClick('${item.id}', 'Question ${item.number}', ${hasFile})" style="display: flex; flex-grow: 1; justify-content: space-between; align-items: center; cursor: pointer;">
                         <div>
-                            <div class="card-title" style="color: var(--primary-purple)">Question ${item.number}</div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div class="card-title" style="color: ${titleColor}">Question ${item.number}</div>
+                                ${displayDate}
+                            </div>
                             <p style="font-size:13px; margin-top:4px; color:#555;">${item.notes || 'No added formula text notes.'}</p>
                         </div>
-                        <span class="material-icons" style="color: var(--primary-purple); margin-left: auto;">visibility</span>
+                        <span class="material-icons" style="color: ${titleColor}; margin-left: auto;">${visibilityIcon}</span>
                     </div>
                     <span class="material-icons delete-btn" onclick="event.stopPropagation(); deleteRecord('questions', '${item.id}')">delete</span>
                 </div>
@@ -212,6 +233,13 @@ async function navigateToQuestions() {
         contentArea.innerHTML = "❌ Error loading questions: " + err.message;
     }
 }
+
+// Router trigger routing for selection handling
+window.handleQuestionClick = (docId, title, hasFile) => {
+    if (hasFile) {
+        openInlineFile(docId, title);
+    }
+};
 
 // Global back button engine routing
 btnBack.addEventListener("click", () => {
@@ -234,7 +262,7 @@ window.deleteRecord = async (collectionName, docId) => {
         else if (currentView === "dpps") navigateToDpps();
         else if (currentView === "questions") navigateToQuestions();
     } catch (err) {
-        alert("Failed to delete record: " + err.message);
+        console.error("Failed to delete: ", err);
     }
 };
 
@@ -244,10 +272,20 @@ window.deleteRecord = async (collectionName, docId) => {
 fabAdd.addEventListener("click", () => {
     modalContainer.classList.remove("hidden");
     formModalCard.classList.remove("hidden");
+    
+    // Clear fields and internal native messages
     document.getElementById("primary-input").value = "";
     document.getElementById("question-notes").value = "";
     document.getElementById("solution-file-picker").value = "";
-    document.getElementById("selected-file-indicator").textContent = "No file selected (Max 15MB)";
+    document.getElementById("selected-file-indicator").textContent = "No file selected (Optional)";
+    modalError.textContent = ""; 
+
+    // AUTOMATIC NATIVE DATE FORCING INTERFACES
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    document.getElementById("record-date").value = `${yyyy}-${mm}-${dd}`;
 
     if (currentView === "chapters") {
         document.getElementById("form-modal-title").textContent = "Add New Chapter";
@@ -274,52 +312,65 @@ function closeModal() {
     modalContainer.classList.add("hidden");
     formModalCard.classList.add("hidden");
     viewerModalCard.classList.add("hidden");
+    modalError.textContent = "";
 }
 
 document.getElementById("btn-modal-submit").addEventListener("click", async () => {
     const primaryInput = document.getElementById("primary-input").value.trim();
-    if (!primaryInput) return alert("Field value is empty!");
+    const chosenDate = document.getElementById("record-date").value;
+    modalError.textContent = ""; // Clear errors natively on button click
 
-    if (currentView === "chapters") {
-        await addDoc(collection(db, "chapters"), { name: primaryInput, subject: selectedSubject, userId: currentUser.uid });
-        closeModal(); navigateToChapters();
-    } else if (currentView === "dpps") {
-        await addDoc(collection(db, "dpps"), { name: primaryInput, chapterId: selectedChapterId });
-        closeModal(); navigateToDpps();
-    } else if (currentView === "questions") {
-        const filePicker = document.getElementById("solution-file-picker");
-        const rawFile = filePicker.files[0];
-        const notesText = document.getElementById("question-notes").value.trim();
-        
-        if (!rawFile) return alert("You must choose a solution image or PDF file!");
-        
-        document.getElementById("selected-file-indicator").textContent = "Processing and optimizing file...";
+    if (!primaryInput) {
+        modalError.textContent = "⚠️ Please fill in the required name/number field.";
+        return;
+    }
 
-        let encodedDataString = "";
+    try {
+        if (currentView === "chapters") {
+            await addDoc(collection(db, "chapters"), { name: primaryInput, date: chosenDate, subject: selectedSubject, userId: currentUser.uid });
+            closeModal(); navigateToChapters();
+        } else if (currentView === "dpps") {
+            await addDoc(collection(db, "dpps"), { name: primaryInput, date: chosenDate, chapterId: selectedChapterId });
+            closeModal(); navigateToDpps();
+        } else if (currentView === "questions") {
+            const filePicker = document.getElementById("solution-file-picker");
+            const rawFile = filePicker.files[0];
+            const notesText = document.getElementById("question-notes").value.trim();
+            
+            let encodedDataString = "";
+            let fileMimeType = "";
 
-        // If it's an image, auto-compress it down to canvas boundaries under 1MB
-        if (rawFile.type.startsWith("image/")) {
-            encodedDataString = await compressImage(rawFile);
-        } else {
-            // If it's a PDF, read it as-is
-            encodedDataString = await readAsBase64(rawFile);
-            if (encodedDataString.length > 1048487) {
-                alert("This PDF file is too large for Firestore database limits. Please select a PDF file smaller than 700KB.");
-                document.getElementById("selected-file-indicator").textContent = "Error: File too large.";
-                return;
+            // File selection rule skipped completely if rawFile is absent/optional
+            if (rawFile) {
+                document.getElementById("selected-file-indicator").textContent = "Processing and optimizing file...";
+                fileMimeType = rawFile.type;
+
+                if (rawFile.type.startsWith("image/")) {
+                    encodedDataString = await compressImage(rawFile);
+                } else {
+                    encodedDataString = await readAsBase64(rawFile);
+                    if (encodedDataString.length > 1048487) {
+                        modalError.textContent = "⚠️ PDF too large. Please select a file smaller than 700KB.";
+                        document.getElementById("selected-file-indicator").textContent = "Error: File too large.";
+                        return;
+                    }
+                }
             }
-        }
 
-        await addDoc(collection(db, "questions"), {
-            dppId: selectedDppId,
-            number: parseInt(primaryInput, 10),
-            notes: notesText,
-            fileDataStream: encodedDataString,
-            mimeType: rawFile.type
-        });
-        
-        closeModal();
-        navigateToQuestions();
+            await addDoc(collection(db, "questions"), {
+                dppId: selectedDppId,
+                number: parseInt(primaryInput, 10),
+                date: chosenDate,
+                notes: notesText,
+                fileDataStream: encodedDataString, // saved blank if no file selected
+                mimeType: fileMimeType
+            });
+            
+            closeModal();
+            navigateToQuestions();
+        }
+    } catch (err) {
+        modalError.textContent = `❌ Database Error: ${err.message}`;
     }
 });
 
@@ -332,7 +383,6 @@ function readAsBase64(file) {
     });
 }
 
-// Client-side scaling engine to shrink photo files under 1MB
 function compressImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -342,7 +392,6 @@ function compressImage(file) {
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement("canvas");
-                // Limit maximum width or height to 1200px to maintain clear visibility
                 let width = img.width;
                 let height = img.height;
                 const maxDim = 1200;
@@ -362,7 +411,6 @@ function compressImage(file) {
                 const ctx = canvas.getContext("2d");
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Compress image to JPEG format at 65% quality
                 const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
                 resolve(dataUrl);
             };
