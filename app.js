@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDhLfZ7vzJBaWqoEIzJ3M-dYrsA3Pc26YY",
   authDomain: "dpp-track-72653.firebaseapp.com",
@@ -36,9 +35,6 @@ const formModalCard = document.getElementById("form-modal-card");
 const viewerModalCard = document.getElementById("viewer-modal-card");
 const modalError = document.getElementById("modal-error-message");
 
-/* =========================================================================
-   1. AUTHENTICATION PIPELINE
-   ========================================================================= */
 document.getElementById("btn-login").addEventListener("click", () => {
     signInWithPopup(auth, provider).catch(err => console.error("Auth Failed: ", err));
 });
@@ -58,15 +54,11 @@ onAuthStateChanged(auth, user => {
     }
 });
 
-/* =========================================================================
-   2. RENDER ENGINE & NAVIGATION LOOPS
-   ========================================================================= */
 function navigateToSubjects() {
     currentView = "subjects";
     currentTitle.textContent = "Subjects";
     btnBack.classList.add("hidden");
     fabAdd.classList.add("hidden");
-    
     contentArea.innerHTML = `
         <div class="tracker-card" onclick="selectSubject('Physics')"><span class="card-title">📚 Physics</span><span class="material-icons">chevron_right</span></div>
         <div class="tracker-card" onclick="selectSubject('Chemistry')"><span class="card-title">🧪 Chemistry</span><span class="material-icons">chevron_right</span></div>
@@ -80,7 +72,7 @@ async function navigateToChapters() {
     currentTitle.textContent = `${selectedSubject} - Chapters`;
     btnBack.classList.remove("hidden");
     fabAdd.classList.remove("hidden");
-    contentArea.innerHTML = "Loading Chapters...";
+    contentArea.innerHTML = "Loading...";
 
     try {
         const q = query(collection(db, "chapters"), where("userId", "==", currentUser.uid), where("subject", "==", selectedSubject));
@@ -89,27 +81,27 @@ async function navigateToChapters() {
         snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
         list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
         
-        contentArea.innerHTML = list.length === 0 ? "<p style='padding:20px; color:#636e72;'>No chapters added yet.</p>" : "";
+        contentArea.innerHTML = list.length === 0 ? "<p style='padding:20px; color:#636e72;'>No chapters yet.</p>" : "";
         list.forEach(item => {
-            const timeTag = item.time ? ` at ${item.time}` : "";
+            const timeTag = item.time ? ` ${item.time}` : "";
             contentArea.innerHTML += `
                 <div class="tracker-card">
                     <div class="card-main-clickable" onclick="selectChapter('${item.id}', '${item.name}')">
-                        <div><span class="card-title">📁 ${item.name}</span><span style="font-size:12px; color:var(--text-muted); display:block;">Added: ${item.date}${timeTag}</span></div>
+                        <div><span class="card-title">📁 ${item.name}</span><span style="font-size:12px; color:var(--text-muted); display:block;">📅 ${item.date}${timeTag}</span></div>
                         <span class="material-icons">chevron_right</span>
                     </div>
                     <span class="material-icons delete-btn" onclick="event.stopPropagation(); deleteRecord('chapters', '${item.id}')">delete</span>
                 </div>
             `;
         });
-    } catch (err) { contentArea.innerHTML = "❌ Error: " + err.message; }
+    } catch (err) { contentArea.innerHTML = "Error: " + err.message; }
 }
 window.selectChapter = (id, name) => { selectedChapterId = id; selectedChapterName = name; navigateToDpps(); };
 
 async function navigateToDpps() {
     currentView = "dpps";
     currentTitle.textContent = `${selectedChapterName} - DPPs`;
-    contentArea.innerHTML = "Loading DPP Records...";
+    contentArea.innerHTML = "Loading...";
     try {
         const q = query(collection(db, "dpps"), where("chapterId", "==", selectedChapterId));
         const snapshot = await getDocs(q);
@@ -118,25 +110,25 @@ async function navigateToDpps() {
         
         contentArea.innerHTML = list.length === 0 ? "<p style='padding:20px; color:#636e72;'>No DPPs found.</p>" : "";
         list.forEach(item => {
-            const timeTag = item.time ? ` at ${item.time}` : "";
+            const timeTag = item.time ? ` ${item.time}` : "";
             contentArea.innerHTML += `
                 <div class="tracker-card">
                     <div class="card-main-clickable" onclick="selectDpp('${item.id}', '${item.name}')">
-                        <div><span class="card-title">📄 ${item.name}</span><span style="font-size:12px; color:var(--text-muted); display:block;">Target: ${item.date}${timeTag}</span></div>
+                        <div><span class="card-title">📄 ${item.name}</span><span style="font-size:12px; color:var(--text-muted); display:block;">📅 ${item.date}${timeTag}</span></div>
                         <span class="material-icons">chevron_right</span>
                     </div>
                     <span class="material-icons delete-btn" onclick="event.stopPropagation(); deleteRecord('dpps', '${item.id}')">delete</span>
                 </div>
             `;
         });
-    } catch (err) { contentArea.innerHTML = "❌ Error: " + err.message; }
+    } catch (err) { contentArea.innerHTML = "Error: " + err.message; }
 }
 window.selectDpp = (id, name) => { selectedDppId = id; selectedDppName = name; navigateToQuestions(); };
 
 async function navigateToQuestions() {
     currentView = "questions";
     currentTitle.textContent = `${selectedDppName} - Solutions`;
-    contentArea.innerHTML = "Loading Questions...";
+    contentArea.innerHTML = "Loading...";
     try {
         const q = query(collection(db, "questions"), where("dppId", "==", selectedDppId));
         const snapshot = await getDocs(q);
@@ -144,7 +136,7 @@ async function navigateToQuestions() {
         snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
         list.sort((a, b) => (a.number || 0) - (b.number || 0));
         
-        contentArea.innerHTML = list.length === 0 ? "<p style='padding:20px; color:#636e72;'>No entries tracked yet.</p>" : "";
+        contentArea.innerHTML = list.length === 0 ? "<p style='padding:20px; color:#636e72;'>No entries.</p>" : "";
         list.forEach(item => {
             const hasFile = !!item.fileDataStream;
             const timeTag = item.time ? ` ${item.time}` : "";
@@ -153,7 +145,7 @@ async function navigateToQuestions() {
                     <div class="card-main-clickable" onclick="handleQuestionClick('${item.id}', 'Question ${item.number}', ${hasFile})">
                         <div>
                             <div class="card-title" style="color: ${hasFile ? 'var(--primary-purple)' : '#475569'}">Question ${item.number}</div>
-                            <span style="font-size:11px; color:#94a3b8;">📅 ${item.date}${timeTag}</span>
+                            <span style="font-size:11px; font-weight:bold; color: #94a3b8;">📅 ${item.date}${timeTag}</span>
                             <p style="font-size:13px; color:#555;">${item.notes || 'No notes.'}</p>
                         </div>
                         <span class="material-icons">${hasFile ? 'visibility' : 'notes'}</span>
@@ -162,7 +154,7 @@ async function navigateToQuestions() {
                 </div>
             `;
         });
-    } catch (err) { contentArea.innerHTML = "❌ Error: " + err.message; }
+    } catch (err) { contentArea.innerHTML = "Error: " + err.message; }
 }
 
 window.handleQuestionClick = (docId, title, hasFile) => { if (hasFile) openInlineFile(docId, title); };
@@ -173,12 +165,9 @@ btnBack.addEventListener("click", () => {
     else if (currentView === "questions") navigateToDpps();
 });
 
-/* =========================================================================
-   3. MODAL & DELETION HANDLER
-   ========================================================================= */
-window.deleteRecord = async (colName, docId) => {
-    if (confirm("Permanently delete?")) {
-        await deleteDoc(doc(db, colName, docId));
+window.deleteRecord = async (col, id) => {
+    if (confirm("Delete this entry?")) {
+        await deleteDoc(doc(db, col, id));
         if (currentView === "chapters") navigateToChapters();
         else if (currentView === "dpps") navigateToDpps();
         else if (currentView === "questions") navigateToQuestions();
@@ -194,19 +183,15 @@ fabAdd.addEventListener("click", () => {
     document.getElementById("record-date").value = now.toISOString().split('T')[0];
     document.getElementById("record-time").value = now.toTimeString().slice(0,5);
 
-    // Setup Modals
-    if (currentView === "chapters") {
-        document.getElementById("form-modal-title").textContent = "Add New Chapter";
-        document.getElementById("question-file-fields").classList.add("hidden");
-    } else if (currentView === "questions") {
-        document.getElementById("question-file-fields").classList.remove("hidden");
-    }
+    document.getElementById("question-file-fields").classList.toggle("hidden", currentView !== "questions");
 });
 
 document.getElementById("btn-modal-submit").addEventListener("click", async () => {
     const primaryInput = document.getElementById("primary-input").value.trim();
     const chosenDate = document.getElementById("record-date").value;
-    const chosenTime = document.getElementById("record-time").value;
+    const chosenTime = document.getElementById("record-time").value; // Capture time
+
+    if (!primaryInput) return;
 
     try {
         if (currentView === "chapters") {
@@ -217,11 +202,10 @@ document.getElementById("btn-modal-submit").addEventListener("click", async () =
             closeModal(); navigateToDpps();
         } else if (currentView === "questions") {
             const rawFile = document.getElementById("solution-file-picker").files[0];
-            let encodedData = rawFile ? (rawFile.type.startsWith("image/") ? await compressImage(rawFile) : await readAsBase64(rawFile)) : "";
+            let encodedData = rawFile ? await readAsBase64(rawFile) : "";
             
             await addDoc(collection(db, "questions"), {
-                dppId: selectedDppId, number: parseInt(primaryInput), date: chosenDate, time: chosenTime, 
-                notes: document.getElementById("question-notes").value, fileDataStream: encodedData, mimeType: rawFile?.type || ""
+                dppId: selectedDppId, number: parseInt(primaryInput), date: chosenDate, time: chosenTime, notes: document.getElementById("question-notes").value, fileDataStream: encodedData, mimeType: rawFile?.type || ""
             });
             closeModal(); navigateToQuestions();
         }
@@ -234,14 +218,6 @@ function closeModal() {
     viewerModalCard.classList.add("hidden");
 }
 
-/* Helpers: Image compression/Base64 omitted for brevity, ensure existing functions exist */
 async function readAsBase64(file) { return new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(file); }); }
-async function compressImage(file) { /* ... existing compression logic ... */ return readAsBase64(file); }
-
-window.openInlineFile = async (docId, title) => {
-    modalContainer.classList.remove("hidden");
-    viewerModalCard.classList.remove("hidden");
-    // ... existing rendering logic ...
-};
-
 document.getElementById("btn-close-viewer").addEventListener("click", closeModal);
+document.getElementById("btn-modal-cancel").addEventListener("click", closeModal);
