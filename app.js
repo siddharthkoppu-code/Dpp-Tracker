@@ -242,4 +242,125 @@ window.deleteRecord = async (collectionName, docId) => {
 /* =========================================================================
    4. MODAL POPUP SUBMISSIONS 
    ========================================================================= */
-fabAdd.
+fabAdd.addEventListener("click", () => {
+    modalContainer.classList.remove("hidden");
+    formModalCard.classList.remove("hidden");
+    document.getElementById("primary-input").value = "";
+    document.getElementById("question-notes").value = "";
+    document.getElementById("solution-file-picker").value = "";
+    document.getElementById("selected-file-indicator").textContent = "No file selected (Max 15MB)";
+
+    if (currentView === "chapters") {
+        document.getElementById("form-modal-title").textContent = "Add New Chapter";
+        document.getElementById("input-label-text").textContent = "Chapter Name";
+        document.getElementById("question-file-fields").classList.add("hidden");
+    } else if (currentView === "dpps") {
+        document.getElementById("form-modal-title").textContent = "Add New DPP Sheet";
+        document.getElementById("input-label-text").textContent = "DPP Designation/No.";
+        document.getElementById("question-file-fields").classList.add("hidden");
+    } else if (currentView === "questions") {
+        document.getElementById("form-modal-title").textContent = "Insert Question Entry";
+        document.getElementById("input-label-text").textContent = "Question Number (Numeric)";
+        document.getElementById("question-file-fields").classList.remove("hidden");
+    }
+});
+
+document.getElementById("solution-file-picker").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if(file) document.getElementById("selected-file-indicator").textContent = `${file.name} (${(file.size/(1024*1024)).toFixed(2)} MB)`;
+});
+
+document.getElementById("btn-modal-cancel").addEventListener("click", closeModal);
+function closeModal() {
+    modalContainer.classList.add("hidden");
+    formModalCard.classList.add("hidden");
+    viewerModalCard.classList.add("hidden");
+}
+
+document.getElementById("btn-modal-submit").addEventListener("click", async () => {
+    const primaryInput = document.getElementById("primary-input").value.trim();
+    if (!primaryInput) return alert("Field value is empty!");
+
+    if (currentView === "chapters") {
+        await addDoc(collection(db, "chapters"), { name: primaryInput, subject: selectedSubject, userId: currentUser.uid });
+        closeModal(); navigateToChapters();
+    } else if (currentView === "dpps") {
+        await addDoc(collection(db, "dpps"), { name: primaryInput, chapterId: selectedChapterId });
+        closeModal(); navigateToDpps();
+    } else if (currentView === "questions") {
+        const filePicker = document.getElementById("solution-file-picker");
+        const rawFile = filePicker.files[0];
+        const notesText = document.getElementById("question-notes").value.trim();
+        
+        if (!rawFile) return alert("You must choose a solution image or PDF file!");
+        
+        document.getElementById("selected-file-indicator").textContent = "Processing and converting file...";
+
+        const encodedDataString = await readAsBase64(rawFile);
+
+        await addDoc(collection(db, "questions"), {
+            dppId: selectedDppId,
+            number: parseInt(primaryInput, 10),
+            notes: notesText,
+            fileDataStream: encodedDataString,
+            mimeType: rawFile.type
+        });
+        
+        closeModal();
+        navigateToQuestions();
+    }
+});
+
+function readAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+/* =========================================================================
+   5. FULL IMMERSIVE VIEWPORT RENDERING ENGINE (NATIVE BASE64 STREAM)
+   ========================================================================= */
+window.openInlineFile = async (docId, title) => {
+    modalContainer.classList.remove("hidden");
+    viewerModalCard.classList.remove("hidden");
+    document.getElementById("pdf-file-name").textContent = title;
+    
+    const viewport = document.querySelector(".pdf-render-viewport");
+    viewport.innerHTML = "<div style='color:white; padding:20px;'>Decoding document stream...</div>";
+
+    try {
+        const targetQuery = query(collection(db, "questions"));
+        const snapshot = await getDocs(targetQuery);
+        
+        let base64Source = "";
+        let fileMime = "image/jpeg";
+        
+        snapshot.forEach(item => {
+            if(item.id === docId) {
+                base64Source = item.data().fileDataStream;
+                fileMime = item.data().mimeType || "image/jpeg";
+            }
+        });
+
+        if (!base64Source) {
+            viewport.innerHTML = "<div style='color:white; padding:20px;'>❌ File data not found.</div>";
+            return;
+        }
+
+        if (fileMime === "application/pdf") {
+            viewport.innerHTML = `<iframe src="${base64Source}" width="100%" height="100%" style="border: none; background: white; border-radius:8px;"></iframe>`;
+        } else {
+            viewport.innerHTML = `
+                <div style="width:100%; height:100%; overflow:auto; display:flex; justify-content:center; align-items:center; background:#1e1e1e; border-radius:8px;">
+                    <img src="${base64Source}" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>`;
+        }
+    } catch (err) {
+        viewport.innerHTML = `<div style='color:white; padding:20px;'>❌ Error opening file: ${err.message}</div>`;
+    }
+};
+
+document.getElementById("btn-close-viewer").addEventListener("click", closeModal);
