@@ -36,6 +36,12 @@
     <div id="modal-container" class="modal-overlay hidden">
         <div id="form-modal-card" class="modal-card hidden">
             <h3 id="form-modal-title">Add Record</h3>
+            
+            <div class="input-group">
+                <label for="record-date">Tracking Date</label>
+                <input type="date" id="record-date">
+            </div>
+
             <div class="input-group">
                 <label id="input-label-text" for="primary-input">Name</label>
                 <input type="text" id="primary-input" placeholder="e.g. Kinematics or DPP 01">
@@ -48,12 +54,14 @@
                 </div>
                 <div class="input-group file-uploader-zone">
                     <label class="file-stub-btn" for="solution-file-picker">
-                        <span class="material-icons">cloud_upload</span> Choose Photo or PDF Solution
+                        <span class="material-icons">cloud_upload</span> Choose Photo or PDF Solution (Optional)
                     </label>
                     <input type="file" id="solution-file-picker" accept="image/png, image/jpeg, application/pdf">
                     <div id="selected-file-indicator">No file selected (Max 15MB)</div>
                 </div>
             </div>
+
+            <div id="modal-error-message" style="color: #ef4444; font-size: 14px; font-weight: 600; text-align: center; margin: 10px 0; min-height: 20px;"></div>
 
             <div class="modal-actions">
                 <button id="btn-modal-submit" class="purple-btn-full">Save Record</button>
