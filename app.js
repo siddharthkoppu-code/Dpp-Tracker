@@ -172,48 +172,33 @@ async function navigateToDpps() {
             `;
         });
     } catch (err) {
-        // Replace lines 174-200 with this:
-contentArea.innerHTML = ""; // Clear once
-questionsList.forEach(item => {
-    const displayDate = item.date ? `<span style="font-size:11px; font-weight:bold; color: #94a3b8; margin-right:8px;">📅 ${item.date}</span>` : "";
-    const hasFile = !!item.fileDataStream;
-    const visibilityIcon = hasFile ? 'visibility' : 'notes';
-    const titleColor = hasFile ? 'var(--primary-purple)' : '#475569';
+        contentArea.innerHTML = "❌ Error loading DPPs: " + err.message;
+    }
+}
+window.selectDpp = (id, name) => {
+    selectedDppId = id;
+    selectedDppName = name;
+    navigateToQuestions();
+};
 
-    // Create a container for the card
-    const card = document.createElement("div");
-    card.className = "tracker-card";
-    card.style.display = "flex";
-    card.style.justifyContent = "space-between";
-    card.style.alignItems = "center";
-    
-    // Create the clickable area
-    card.innerHTML = `
-        <div class="card-main-clickable" style="display: flex; flex-grow: 1; justify-content: space-between; align-items: center; cursor: pointer;">
-            <div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <div class="card-title" style="color: ${titleColor}">Question ${item.number}</div>
-                    ${displayDate}
-                </div>
-                <p style="font-size:13px; margin-top:4px; color:#555;">${item.notes || 'No added formula text notes.'}</p>
-            </div>
-            <span class="material-icons" style="color: ${titleColor}; margin-left: auto;">${visibilityIcon}</span>
-        </div>
-        <span class="material-icons delete-btn">delete</span>
-    `;
+async function navigateToQuestions() {
+    currentView = "questions";
+    currentTitle.textContent = `${selectedDppName} - Solutions`;
+    btnBack.classList.remove("hidden");
+    fabAdd.classList.remove("hidden");
+    contentArea.innerHTML = "Loading Questions...";
 
-    // Attach events properly (Prevents SyntaxErrors and memory leaks)
-    card.querySelector(".card-main-clickable").onclick = () => {
-        if (hasFile) openInlineFile(item.id, `Question ${item.number}`);
-    };
-    
-    card.querySelector(".delete-btn").onclick = (e) => {
-        e.stopPropagation();
-        deleteRecord('questions', item.id);
-    };
+    try {
+        const q = query(collection(db, "questions"), where("dppId", "==", selectedDppId));
+        const snapshot = await getDocs(q);
+        
+        let questionsList = [];
+        snapshot.forEach(doc => {
+            questionsList.push({ id: doc.id, ...doc.data() });
+        });
 
-    contentArea.appendChild(card);
-});        
+        questionsList.sort((a, b) => (a.number || 0) - (b.number || 0));
+        
         contentArea.innerHTML = "";
         if (questionsList.length === 0) {
             contentArea.innerHTML = "<p style='padding:20px; color:#636e72;'>No question entries tracked yet. Click '+' to log your first solution!</p>";
